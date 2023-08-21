@@ -83,26 +83,15 @@ class GallereyViewController: UIViewController {
         arrayOfImages.append(image)
     }
     
-    func saveImages(_ arrayOfImages: [UIImage]) {
-        var arrayOfImagesURLS: [String] = []
-        for (index,image) in arrayOfImages.enumerated() {
-            guard let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+    func saveImage(image: UIImage) {
+        guard let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
                   let imageData = image.pngData() else { return }
-            
-            let fileName = "\(index)"
-            
-            let fileURL = URL(fileURLWithPath: fileName, relativeTo: saveDirectory).appendingPathExtension("png")
-            
-            try? imageData.write(to: fileURL)
-            
-            arrayOfImagesURLS.append(fileName)
-        }
-        URLManager.setImagesNames(arrayOfImagesURLS: arrayOfImagesURLS)
+        let fileName = "\(URLManager.getImagesURL().count + 1)"
+        let fileURL = URL(fileURLWithPath: fileName, relativeTo: saveDirectory).appendingPathExtension("png")
+        try? imageData.write(to: fileURL)
+        URLManager.setImageName(imageURL: fileName)
     }
     
-    deinit {
-        saveImages(arrayOfImages)
-    }
 }
 
 extension GallereyViewController: UIImagePickerControllerDelegate & UINavigationControllerDelegate {
@@ -110,6 +99,7 @@ extension GallereyViewController: UIImagePickerControllerDelegate & UINavigation
         guard let errorImage = UIImage(systemName: "xmark.circle") else { return }
         arrayOfImages.append(info[.originalImage] as? UIImage ?? errorImage)
         picker.dismiss(animated: true)
+        saveImage(image: (arrayOfImages.last ?? UIImage(systemName: "xmark.circle"))!)
         imagesCollectionView.reloadData()
     }
 }

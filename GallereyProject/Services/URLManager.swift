@@ -12,8 +12,9 @@ class URLManager {
         return UserDefaults.standard.array(forKey: "ImagesURLS") as? [String] ?? []
     }
     
-    public static func setImagesNames(arrayOfImagesURLS: [String]) {
-        UserDefaults.standard.set(nil, forKey: "ImagesURLS")
-        UserDefaults.standard.set(arrayOfImagesURLS, forKey: "ImagesURLS")
+    public static func setImageName(imageURL: String) {
+        var otherImages = getImagesURL()
+        otherImages.append(imageURL)
+        UserDefaults.standard.set(otherImages, forKey: "ImagesURLS")
     }
 }
