@@ -7,8 +7,9 @@
 
 import UIKit
 import SnapKit
+import UniformTypeIdentifiers
 
-class GallereyViewController: UIViewController {
+class GallereyViewController: UIViewController, UIDocumentPickerDelegate {
     
     private lazy var imagesCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -29,18 +30,18 @@ class GallereyViewController: UIViewController {
         view.backgroundColor = .systemBackground
         navigationItem.rightBarButtonItem =  UIBarButtonItem(title: "Добавить", image: nil, target: self, action: #selector(addImage))
         setupCollectionView()
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        let arrayOfUmagesURLS = URLManager.getImagesURL()
-        for fileName in arrayOfUmagesURLS {
-            guard let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-            
-            let fileURL = URL(fileURLWithPath: fileName, relativeTo: saveDirectory).appendingPathExtension("png")
-            loadImage(from: fileURL)
+        DispatchQueue.main.async { [weak self] in
+            let arrayOfUmagesURLS = URLManager.getImagesURL()
+            for fileName in arrayOfUmagesURLS {
+                guard let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+                
+                let fileURL = URL(fileURLWithPath: fileName, relativeTo: saveDirectory).appendingPathExtension("png")
+                self?.loadImage(from: fileURL)
+            }
+            self?.imagesCollectionView.reloadData()
         }
     }
+    
     
     private func setupCollectionView() {
         view.addSubview(imagesCollectionView)
@@ -70,6 +71,9 @@ class GallereyViewController: UIViewController {
             pickerController.sourceType = .photoLibrary
             self?.present(pickerController, animated: true)
         }))
+        alert.addAction(UIAlertAction(title: "Документы", style: .default, handler: { [weak self] _ in
+            self?.selectFiles()
+        }))
         alert.addAction(UIAlertAction(title: "Отмена", style: .cancel, handler: { _ in
         }))
         self.present(alert, animated: true, completion: nil)
@@ -84,13 +88,32 @@ class GallereyViewController: UIViewController {
     }
     
     func saveImage(image: UIImage) {
-        guard let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
-                  let imageData = image.pngData() else { return }
-        let fileName = "\(URLManager.getImagesURL().count + 1)"
-        let fileURL = URL(fileURLWithPath: fileName, relativeTo: saveDirectory).appendingPathExtension("png")
-        try? imageData.write(to: fileURL)
-        URLManager.setImageName(imageURL: fileName)
+        DispatchQueue.global().async {
+            guard let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+                      let imageData = image.pngData() else { return }
+            let fileName = "\(URLManager.getImagesURL().count + 1)"
+            let fileURL = URL(fileURLWithPath: fileName, relativeTo: saveDirectory).appendingPathExtension("png")
+            try? imageData.write(to: fileURL)
+            URLManager.setImageName(imageURL: fileName)
+        }
     }
+    
+    func selectFiles() {
+        let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.item], asCopy: false)
+        documentPicker.delegate = self
+        documentPicker.modalPresentationStyle = .formSheet
+        
+        self.present(documentPicker, animated: true, completion: nil)
+    }
+    
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let myURL = urls.first else { return }
+        let data = try? Data(contentsOf: myURL)
+        let image = UIImage(data: data ?? Data())
+        arrayOfImages.append(image ?? UIImage())
+        saveImage(image: image ?? UIImage())
+        imagesCollectionView.reloadData()
+     }
     
 }
 
